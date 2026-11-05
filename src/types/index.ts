@@ -37,6 +37,29 @@ export interface VenueCard {
   votesCount: number;
   matched?: boolean;
   cuisineCategory: string;
+  aiRationale?: string;
+  vibeConsensus?: string;
+  matchmakerScore?: number;
+}
+
+export interface AIMatchmakerResult {
+  unlockedVenueId: string;
+  unlockedVenueName: string;
+  votesCount: number;
+  totalSquad: number;
+  groupOverlapPercent: number;
+  budgetRationale: string;
+  travelRationale: string;
+  vibeConsensusText: string;
+  bannerText: string;
+  aiRationaleChip: string;
+  reasons: string[];
+  metrics: {
+    budgetScore: number;
+    commuteScore: number;
+    vibeScore: number;
+    groupAgreement: number;
+  };
 }
 
 export interface ItineraryStop {

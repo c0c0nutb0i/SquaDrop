@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { VenueCard, SquadMember } from '../types';
+import { VenueCard, SquadMember, AIMatchmakerResult } from '../types';
+import { AIMatchmakerBanner } from './AIMatchmakerBanner';
+import { VENUE_AI_PROFILES } from '../services/aiMatchmaker';
 import {
   X,
   Heart,
@@ -19,6 +21,8 @@ import {
   Bell,
   Check,
   Radio,
+  Bot,
+  Zap,
 } from 'lucide-react';
 
 interface SwipeTabProps {
@@ -27,6 +31,8 @@ interface SwipeTabProps {
   activeVenue: VenueCard;
   onSelectVenue: (venueId: string) => void;
   onGoToHub: () => void;
+  matchmakerResult: AIMatchmakerResult;
+  onUserSwipe?: (venueId: string, action: 'like' | 'skip' | 'priority') => void;
 }
 
 export const SwipeTab: React.FC<SwipeTabProps> = ({
@@ -35,6 +41,8 @@ export const SwipeTab: React.FC<SwipeTabProps> = ({
   activeVenue,
   onSelectVenue,
   onGoToHub,
+  matchmakerResult,
+  onUserSwipe,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState('All Ideas');
@@ -77,6 +85,9 @@ export const SwipeTab: React.FC<SwipeTabProps> = ({
     setSwipeFeedback(action);
     const voteType = action === 'like' ? 'liked' : action === 'skip' ? 'skipped' : 'priority';
     setUserVotes((prev) => ({ ...prev, [currentVenue.id]: voteType }));
+    if (onUserSwipe) {
+      onUserSwipe(currentVenue.id, action);
+    }
 
     if (action === 'like') {
       onSelectVenue(currentVenue.id);
@@ -123,36 +134,13 @@ export const SwipeTab: React.FC<SwipeTabProps> = ({
         </div>
       )}
 
-      {/* 1. Top Match Notification Banner */}
-      {matchBannerVisible && (
-        <div className="relative flex items-center justify-between gap-3 bg-[#1A1A1A] border border-[#2D2D2D] hover:border-neutral-500 rounded-2xl px-4 py-2.5 transition-all shadow-md">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-amber-400 shrink-0">
-              <Sparkles size={16} />
-            </span>
-            <div className="text-xs truncate">
-              <span className="font-extrabold text-white">Match Unlocked! </span>
-              <span className="text-neutral-300 font-medium">{activeVenue.name}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setShowMatchModal(true)}
-              className="flex items-center gap-1 bg-white hover:bg-neutral-200 text-black text-xs font-extrabold px-3 py-1 rounded-full cursor-pointer transition-colors"
-            >
-              <span>View</span>
-              <ArrowRight size={12} />
-            </button>
-            <button
-              onClick={() => setMatchBannerVisible(false)}
-              className="text-neutral-500 hover:text-white p-1 cursor-pointer"
-              title="Dismiss notification"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 1. Top Match Unlocked Banner (Smart Hangout & Venue Matchmaker) */}
+      <AIMatchmakerBanner
+        matchmakerResult={matchmakerResult}
+        venues={venues}
+        onSelectVenue={onSelectVenue}
+        onGoToHub={onGoToHub}
+      />
 
       {/* 2. Squad Voting Progress Header (INTERACTABLE: Tap to show who is voting and their real-time locations) */}
       <button
@@ -352,6 +340,29 @@ export const SwipeTab: React.FC<SwipeTabProps> = ({
                   {tag}
                 </span>
               ))}
+            </div>
+
+            {/* AI Recommendation Badge on Cards */}
+            <div className="bg-[#1C1C1C] border border-[#2D2D2D] rounded-2xl p-2.5 flex items-center justify-between gap-2.5 shadow-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base shrink-0">🤖</span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <span>Squadrop AI</span>
+                    <span className="w-1 h-1 rounded-full bg-neutral-600" />
+                    <span className="text-neutral-400 font-normal">Matchmaker Analysis</span>
+                  </div>
+                  <div className="text-xs font-semibold text-neutral-200 truncate mt-0.5">
+                    {VENUE_AI_PROFILES[currentVenue.id]?.aiRationaleChip.replace('🤖 Squadrop AI: ', '') ||
+                      'Best match for tonight • Fits 5/5 budgets • 15 min travel time'}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full shrink-0 font-bold">
+                {currentVenue.id === matchmakerResult.unlockedVenueId
+                  ? `${matchmakerResult.groupOverlapPercent}% Match`
+                  : '92% Match'}
+              </span>
             </div>
           </div>
 
@@ -693,31 +704,67 @@ export const SwipeTab: React.FC<SwipeTabProps> = ({
                 Bangalore Venue Standings
               </div>
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectVenue('oia-bangalore');
+                    showToast('⚡ AI Matchmaker Unlocked: Oia Bangalore (4/5 Squad Members Voted Yes)');
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] transition-colors cursor-pointer text-left"
+                >
                   <span className="text-white font-bold flex items-center gap-1.5">
-                    <span>🏆 Shiro (UB City)</span>
+                    <span>⚡ Oia Bangalore (Hebbal)</span>
                     <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/40">
-                      Top Match Unlocked
+                      AI Matchmaker Pick
                     </span>
                   </span>
                   <span className="font-mono text-emerald-400 font-extrabold">
-                    {kabirVoted ? '4/5 Votes' : '3/5 Votes (3 Friends Voted)'}
+                    4/5 Votes
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-neutral-300">
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectVenue('shiro');
+                    showToast('⚡ AI Matchmaker Unlocked: Shiro (3/5 Squad Members Voted Yes)');
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2D2D2D] transition-colors cursor-pointer text-left"
+                >
+                  <span className="text-white font-semibold flex items-center gap-1.5">
+                    <span>Shiro (UB City)</span>
+                    <span className="text-[9px] bg-neutral-800 text-neutral-300 px-1.5 py-0.2 rounded">
+                      Central Pick
+                    </span>
+                  </span>
+                  <span className="font-mono text-neutral-300">
+                    3/5 Votes
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectVenue('lotus-pavilion');
+                    showToast('⚡ AI Matchmaker Unlocked: Lotus Pavilion (4/5 Squad Members Voted Yes)');
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2D2D2D] transition-colors cursor-pointer text-left text-neutral-300"
+                >
                   <span>Lotus Pavilion (Residency Rd)</span>
                   <span className="font-mono text-neutral-400">1/5 Votes</span>
-                </div>
-                <div className="flex items-center justify-between text-neutral-300">
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectVenue('farmlore');
+                    showToast('⚡ AI Matchmaker Unlocked: Farmlore (4/5 Squad Members Voted Yes)');
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2D2D2D] transition-colors cursor-pointer text-left text-neutral-300"
+                >
                   <span>Farmlore (Devanahalli)</span>
                   <span className="font-mono text-neutral-400">1/5 Votes</span>
-                </div>
-                <div className="flex items-center justify-between text-neutral-300">
-                  <span>Oia Bangalore (Hebbal / Hennur)</span>
-                  <span className="font-mono text-neutral-400">
-                    {kabirVoted ? '1/5 Votes' : '0/5 Votes'}
-                  </span>
-                </div>
+                </button>
               </div>
             </div>
 

@@ -42,7 +42,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   ];
 
   return (
-    <nav className="w-full bg-[#141414] text-white border-t border-[#262626] shadow-[0_-4px_24px_rgba(0,0,0,0.6)] backdrop-blur-md">
+    <nav
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        zIndex: 9999,
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+      }}
+      className="fixed bottom-0 left-0 w-full z-[9999] bg-[#141414] text-white border-t border-[#262626] shadow-[0_-4px_24px_rgba(0,0,0,0.7)] backdrop-blur-md"
+    >
       <div className="grid grid-cols-4 items-center max-w-lg mx-auto h-16 px-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;

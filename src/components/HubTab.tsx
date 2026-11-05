@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SquadMember, VenueDetailData } from '../types';
+import { SquadMember, VenueDetailData, VenueCard, AIMatchmakerResult } from '../types';
+import { AIMatchmakerBanner } from './AIMatchmakerBanner';
 import {
   Radio,
   Calendar,
@@ -16,6 +17,7 @@ import {
   Maximize2,
   Check,
   X,
+  Sparkles,
 } from 'lucide-react';
 
 interface HubTabProps {
@@ -23,6 +25,9 @@ interface HubTabProps {
   venueData: VenueDetailData;
   onGoToHuddle: () => void;
   onUpdateMemberStatus: (status: SquadMember['status'], note: string) => void;
+  matchmakerResult?: AIMatchmakerResult;
+  venues?: VenueCard[];
+  onSelectVenue?: (venueId: string) => void;
 }
 
 export const HubTab: React.FC<HubTabProps> = ({
@@ -30,6 +35,9 @@ export const HubTab: React.FC<HubTabProps> = ({
   venueData,
   onGoToHuddle,
   onUpdateMemberStatus,
+  matchmakerResult,
+  venues,
+  onSelectVenue,
 }) => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [myStatus, setMyStatus] = useState<SquadMember['status']>('Confirmed');
@@ -91,6 +99,15 @@ export const HubTab: React.FC<HubTabProps> = ({
           <Check size={14} className="text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
+      )}
+
+      {/* Top Match Unlocked Banner (Swipe & Hub Tabs) */}
+      {matchmakerResult && venues && (
+        <AIMatchmakerBanner
+          matchmakerResult={matchmakerResult}
+          venues={venues}
+          onSelectVenue={onSelectVenue || (() => {})}
+        />
       )}
 
       {/* 1. Voice Huddle Mini Banner */}
@@ -209,6 +226,27 @@ export const HubTab: React.FC<HubTabProps> = ({
             <span>Update</span>
             <span>✎</span>
           </button>
+        </div>
+
+        {/* Group Consensus Summary Pill */}
+        <div className="bg-[#1C1C1C] border border-[#2B2B2B] rounded-2xl p-3 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Sparkles size={13} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                Squadrop AI • Group Consensus
+              </div>
+              <div className="text-xs font-bold text-white truncate mt-0.5">
+                {matchmakerResult?.vibeConsensusText ||
+                  'Squad Vibe Consensus: 80% prefer Mediterranean & Outdoor Seating tonight.'}
+              </div>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full shrink-0">
+            {matchmakerResult?.groupOverlapPercent || 88}% Vibe Fit
+          </span>
         </div>
 
         {/* Member Status Rows */}

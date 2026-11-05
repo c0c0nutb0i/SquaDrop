@@ -5,6 +5,7 @@ import {
   REAL_BANGALORE_VENUES,
   VENUE_DETAILS_MAP,
 } from './data/mockData';
+import { calculateAIMatchmaker } from './services/aiMatchmaker';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { SplashScreen } from './components/SplashScreen';
@@ -12,28 +13,23 @@ import { SwipeTab } from './components/SwipeTab';
 import { HubTab } from './components/HubTab';
 import { HuddleTab } from './components/HuddleTab';
 import { SplitTab } from './components/SplitTab';
-import { EmblemLogo } from './components/EmblemLogo';
-import {
-  Wifi,
-  BatteryMedium,
-  Palette,
-  CheckCircle,
-  MapPin,
-  Sparkles,
-} from 'lucide-react';
+import { Palette, Zap } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('swipe');
   const [isSplashOpen, setIsSplashOpen] = useState(false);
-  const [isPhoneFrame, setIsPhoneFrame] = useState(true);
   const [myShareSettled, setMyShareSettled] = useState(false);
   const [showDesignTokens, setShowDesignTokens] = useState(false);
 
   // Active Real Bangalore Dining Destination ID (Default: Shiro at UB City)
   const [activeVenueId, setActiveVenueId] = useState<string>('shiro');
+  const [userSwipes, setUserSwipes] = useState<Record<string, 'liked' | 'skipped' | 'priority'>>({});
 
   const [members, setMembers] = useState<SquadMember[]>(INITIAL_MEMBERS);
   const venues = REAL_BANGALORE_VENUES;
+
+  // Real-time AI Matchmaker computation
+  const matchmakerResult = calculateAIMatchmaker(venues, activeVenueId, userSwipes);
 
   const currentVenueData = VENUE_DETAILS_MAP[activeVenueId] || VENUE_DETAILS_MAP['shiro'];
 
@@ -50,6 +46,14 @@ export default function App() {
           : m
       )
     );
+  };
+
+  const handleUserSwipe = (venueId: string, action: 'like' | 'skip' | 'priority') => {
+    const voteType = action === 'like' ? 'liked' : action === 'skip' ? 'skipped' : 'priority';
+    setUserSwipes((prev) => ({ ...prev, [venueId]: voteType }));
+    if (action === 'like' || action === 'priority') {
+      handleSelectVenue(venueId);
+    }
   };
 
   const handleUpdateMemberStatus = (newStatus: SquadMember['status'], note: string) => {
@@ -87,199 +91,86 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col font-sans selection:bg-white selection:text-black">
-      {/* Top Bar with Venue Switcher and Controls */}
+    <div
+      style={{
+        width: '100vw',
+        height: '100dvh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      className="w-screen h-[100dvh] overflow-hidden flex flex-col bg-[#0D0D0D] text-white font-sans selection:bg-white selection:text-black relative"
+    >
+      {/* Top Header with Venue Switcher and Squad Status */}
       <Header
         onOpenSplash={() => setIsSplashOpen(true)}
-        isPhoneFrame={isPhoneFrame}
-        onTogglePhoneFrame={() => setIsPhoneFrame(!isPhoneFrame)}
         activeTabName={tabLabels[activeTab]}
         venues={venues}
         activeVenueId={activeVenueId}
         onSelectVenue={handleSelectVenue}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 w-full">
-        {isPhoneFrame ? (
-          /* Phone Frame Container */
-          <div className="relative w-full max-w-[420px] bg-[#121212] rounded-[42px] border-[5px] border-[#2A2A2A] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col min-h-[760px] max-h-[92vh]">
-            {/* Phone Top Notch / Speaker & Status Bar */}
-            <div className="relative bg-[#0D0D0D] pt-3 pb-2 px-6 flex items-center justify-between text-neutral-400 select-none border-b border-[#222222] z-30 shrink-0">
-              {/* Dynamic Island / Camera Punch Hole */}
-              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-full border border-neutral-800" />
-              <span className="text-[11px] font-semibold text-neutral-300">9:41</span>
-              <div className="flex items-center gap-2">
-                <Wifi size={13} className="text-neutral-400" />
-                <BatteryMedium size={15} className="text-neutral-300" />
-              </div>
-            </div>
-
-            {/* Inner App Top Sub-Header */}
-            <div className="px-4 py-2.5 bg-[#0D0D0D] flex items-center justify-between border-b border-[#1F1F1F] shrink-0">
-              <div className="flex items-center gap-2">
-                <EmblemLogo size={22} />
-                <span className="text-xs font-bold text-white tracking-tight">
-                  Squadrop
-                </span>
-                <span className="w-1 h-1 rounded-full bg-neutral-500" />
-                <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">
-                  {tabLabels[activeTab]}
-                </span>
-              </div>
-
-              {/* Active Venue Indicator Chip */}
-              <div className="flex items-center gap-1.5 bg-[#1C1C1C] border border-[#2B2B2B] pl-2 pr-1.5 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[10px] font-bold text-neutral-200">
-                  {currentVenueData.venue.shortName}
-                </span>
-                <div className="w-4 h-4 rounded-full overflow-hidden bg-neutral-700 ml-0.5">
-                  <img
-                    src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80"
-                    alt="Ananya"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Scrollable Screen Content */}
-            <div className="flex-1 overflow-y-auto px-3.5 py-3.5 no-scrollbar bg-[#0D0D0D]">
-              {activeTab === 'swipe' && (
-                <SwipeTab
-                  venues={venues}
-                  members={members}
-                  activeVenue={currentVenueData.venue}
-                  onSelectVenue={handleSelectVenue}
-                  onGoToHub={() => setActiveTab('hub')}
-                />
-              )}
-              {activeTab === 'hub' && (
-                <HubTab
-                  members={members}
-                  venueData={currentVenueData}
-                  onGoToHuddle={() => setActiveTab('huddle')}
-                  onUpdateMemberStatus={handleUpdateMemberStatus}
-                />
-              )}
-              {activeTab === 'huddle' && <HuddleTab members={members} />}
-              {activeTab === 'split' && (
-                <SplitTab
-                  members={members}
-                  venueData={currentVenueData}
-                  onSettleMyShare={handleSettleMyShare}
-                  myShareSettled={myShareSettled}
-                />
-              )}
-            </div>
-
-            {/* Bottom Navigation Inside Phone */}
-            <div className="shrink-0 z-40">
-              <BottomNav
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                matchUnlocked={true}
-                matchedVenueName={currentVenueData.venue.name}
-              />
-            </div>
-          </div>
-        ) : (
-          /* Full View Responsive Mode */
-          <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
-            {/* Top Toolbar in Full View */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#161616] border border-[#262626] rounded-2xl p-2.5">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {(['swipe', 'hub', 'huddle', 'split'] as TabType[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer capitalize ${
-                      activeTab === tab
-                        ? 'bg-white text-black'
-                        : 'text-neutral-400 hover:text-white hover:bg-[#222222]'
-                    }`}
-                  >
-                    {tab === 'swipe' && '1. Swipe Match'}
-                    {tab === 'hub' && '2. Event Hub'}
-                    {tab === 'huddle' && '3. Voice Huddle'}
-                    {tab === 'split' && '4. UPI Bill Split'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Venue Quick Selector in Full View */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-400 font-medium hidden sm:inline">
-                  Destination:
-                </span>
-                <select
-                  value={activeVenueId}
-                  onChange={(e) => handleSelectVenue(e.target.value)}
-                  className="bg-[#202020] border border-[#303030] text-xs font-bold text-white px-3 py-1.5 rounded-xl cursor-pointer focus:outline-none"
-                >
-                  {venues.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} ({v.area.split(',')[0]})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="min-h-[600px]">
-              {activeTab === 'swipe' && (
-                <SwipeTab
-                  venues={venues}
-                  members={members}
-                  activeVenue={currentVenueData.venue}
-                  onSelectVenue={handleSelectVenue}
-                  onGoToHub={() => setActiveTab('hub')}
-                />
-              )}
-              {activeTab === 'hub' && (
-                <HubTab
-                  members={members}
-                  venueData={currentVenueData}
-                  onGoToHuddle={() => setActiveTab('huddle')}
-                  onUpdateMemberStatus={handleUpdateMemberStatus}
-                />
-              )}
-              {activeTab === 'huddle' && <HuddleTab members={members} />}
-              {activeTab === 'split' && (
-                <SplitTab
-                  members={members}
-                  venueData={currentVenueData}
-                  onSettleMyShare={handleSettleMyShare}
-                  myShareSettled={myShareSettled}
-                />
-              )}
-            </div>
-
-            {/* Bottom Bar in Full View */}
-            <div className="sticky bottom-4 max-w-md mx-auto w-full z-40 rounded-2xl overflow-hidden shadow-2xl border border-[#262626]">
-              <BottomNav
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                matchUnlocked={true}
-                matchedVenueName={currentVenueData.venue.name}
-              />
-            </div>
-          </div>
+      {/* Internal Viewport Scrollable Content Area */}
+      <main
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingBottom: '80px',
+        }}
+        className="flex-1 overflow-y-auto no-scrollbar w-full max-w-xl mx-auto px-3 sm:px-4 py-3"
+      >
+        {activeTab === 'swipe' && (
+          <SwipeTab
+            venues={venues}
+            members={members}
+            activeVenue={currentVenueData.venue}
+            onSelectVenue={handleSelectVenue}
+            onGoToHub={() => setActiveTab('hub')}
+            matchmakerResult={matchmakerResult}
+            onUserSwipe={handleUserSwipe}
+          />
         )}
+        {activeTab === 'hub' && (
+          <HubTab
+            members={members}
+            venueData={currentVenueData}
+            onGoToHuddle={() => setActiveTab('huddle')}
+            onUpdateMemberStatus={handleUpdateMemberStatus}
+            matchmakerResult={matchmakerResult}
+            venues={venues}
+            onSelectVenue={handleSelectVenue}
+          />
+        )}
+        {activeTab === 'huddle' && <HuddleTab members={members} />}
+        {activeTab === 'split' && (
+          <SplitTab
+            members={members}
+            venueData={currentVenueData}
+            onSettleMyShare={handleSettleMyShare}
+            myShareSettled={myShareSettled}
+          />
+        )}
+      </main>
 
-        {/* Floating Design Specs & Tokens Drawer Trigger */}
-        <div className="fixed bottom-4 right-4 z-40">
-          <button
-            onClick={() => setShowDesignTokens(!showDesignTokens)}
-            className="flex items-center gap-2 bg-[#1C1C1C] hover:bg-[#252525] border border-[#333333] text-neutral-300 text-xs font-semibold px-3 py-2 rounded-full shadow-lg transition-all cursor-pointer"
-            title="Inspect Monochrome Design System Tokens & Real Bangalore Venues"
-          >
-            <Palette size={14} className="text-neutral-300" />
-            <span className="hidden sm:inline">Bangalore Venues & Spec</span>
-          </button>
-        </div>
+      {/* Sticky Fixed Bottom Navigation Bar */}
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        matchUnlocked={true}
+        matchedVenueName={currentVenueData.venue.name}
+      />
+
+      {/* Floating Design Specs & Tokens Drawer Trigger */}
+      <div className="fixed bottom-20 right-4 z-40">
+        <button
+          onClick={() => setShowDesignTokens(!showDesignTokens)}
+          className="flex items-center gap-2 bg-[#1C1C1C] hover:bg-[#252525] border border-[#333333] text-neutral-300 text-xs font-semibold px-3 py-2 rounded-full shadow-lg transition-all cursor-pointer"
+          title="Inspect Monochrome Design System Tokens & Real Bangalore Venues"
+        >
+          <Palette size={14} className="text-neutral-300" />
+          <span className="hidden sm:inline">Bangalore Venues & Spec</span>
+        </button>
+      </div>
 
         {/* Design System & Real Bangalore Venues Modal */}
         {showDesignTokens && (
@@ -330,6 +221,25 @@ export default function App() {
                   })}
                 </div>
 
+                {/* Smart Hangout & Venue Matchmaker Summary */}
+                <div className="bg-[#1C1C1C] p-3 rounded-2xl border border-emerald-900/50 space-y-2">
+                  <div className="flex items-center justify-between text-white font-bold">
+                    <span className="flex items-center gap-1.5 text-emerald-400">
+                      <Zap size={13} className="fill-emerald-400" />
+                      <span>Smart Hangout & Venue Matchmaker</span>
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">
+                      {matchmakerResult.groupOverlapPercent}% Overlap
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-neutral-300 font-medium">
+                    {matchmakerResult.bannerText}
+                  </div>
+                  <div className="text-[11px] text-neutral-400 italic">
+                    "{matchmakerResult.vibeConsensusText}"
+                  </div>
+                </div>
+
                 {/* Monochrome Spec Sheet */}
                 <div className="bg-[#1C1C1C] p-3 rounded-2xl border border-[#2B2B2B] space-y-2">
                   <div className="flex justify-between">
@@ -364,7 +274,6 @@ export default function App() {
             </div>
           </div>
         )}
-      </main>
 
       {/* Splash Screen Component */}
       <SplashScreen
