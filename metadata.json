@@ -1,0 +1,6 @@
+{
+  "name": "Squadrop",
+  "description": "Squadrop - India localized group hangout coordination ecosystem with swipe-based venue matching, live event hub, drop-in voice huddle, and UPI bill splitting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
